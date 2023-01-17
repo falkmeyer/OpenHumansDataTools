@@ -188,9 +188,7 @@ class Database_IO():
 
 
 
-
-
-    def create_new_db_table(self, db, table_name, type_dict, unique_constrained = ['icustay_id', 'starttime']):
+    def create_new_db_table(self, table_name, type_dict, unique_constrained = None): # unique_constrained can be an array of columns which have to be uniqze together
         '''
             Create new table in the specfified db. A dict with data types is required.
             Optional a constrained for unique together can be set.
