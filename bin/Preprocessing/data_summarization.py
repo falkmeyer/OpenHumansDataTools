@@ -5,6 +5,7 @@ import os
 import pandas as pd
 
 
+####### Sumarization part
 
 class Data_Summarization():
 
@@ -12,8 +13,11 @@ class Data_Summarization():
         self.data_io = data_io
 
 
+    ###########################
+    ####### File usage ########
+    ###########################
 
-    ####### Sumarization part
+    
 
 
     def summarize_data(self, csv_files, outpath):
@@ -79,3 +83,11 @@ class Data_Summarization():
             temp_df = pd.read_csv(file)
             df = df.append(temp_df, ignore_index=True)
         return df
+
+
+    
+    ###############################
+    ####### Database usage ########
+    ###############################
+
+    ########### Data summarization using queries on the Datbase #######
