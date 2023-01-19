@@ -3,6 +3,7 @@
 # uses the restructured data after the data wrangling process and generates a summary
 import os
 import pandas as pd
+import csv
 
 
 ####### Sumarization part
@@ -76,14 +77,29 @@ class Data_Summarization():
     ######## Some helper functions
 
 
-    def merge_csv_files(self, file_list):
-        df = pd.DataFrame()
+    def merge_pandas_frames(self, frame_list):
+        
+        #for file in file_list:
+        #    temp_df = pd.read_csv(file)
+        #    df = df.append(temp_df, ignore_index=True)
+        #return df
 
-        for file in file_list:
-            temp_df = pd.read_csv(file)
-            df = df.append(temp_df, ignore_index=True)
-        return df
+        # Merge the dataframes into one single dataframe
+        merged_df = pd.concat(frame_list, axis=0)
+        
+        # Update the "value_count" column
+        merged_df["value_count"] = merged_df.groupby("path")["value_count"].transform("sum")
 
+        # Update the "mean" column
+        merged_df["mean"] = merged_df.groupby("path")["mean"].transform("mean")
+
+        # Update the "max" column
+        merged_df["max"] = merged_df.groupby("path")["max"].transform("max")
+
+        # Update the "min" column
+        merged_df["min"] = merged_df.groupby("path")["min"].transform("min")
+
+        return(merged_df)
 
     
     ###############################
