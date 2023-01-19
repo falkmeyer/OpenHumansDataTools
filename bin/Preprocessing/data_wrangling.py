@@ -48,11 +48,16 @@ class Data_Wrangling():
                 if isinstance(data, datetime.date):
                     starttime = data
                 elif data is not None or str(data) != '':
-                    list_dicts.append({'path': path.strip().lower(), 'value': data if isinstance(data, (int, float)) else None,
+                    utc_offset = 0 # TODO: read UTC Offset from the UploadInfo file of the upload folder, otherwise assume 0
+                    starttime = datetime.datetime.fromtimestamp((starttime + utc_offset) / 1000.0) # the starttime is provided in miliseconds format
+
+                    list_dicts.append({'path': path.strip().lower(), 'value': float(data) if isinstance(data, (int, float)) else None,
                                     'value_str': str(data).strip() if not isinstance(data, (int, float)) else None,
                                     'starttime': starttime,
-                                    'duration': duration,
-                                    'isValid': isValid})
+                                    'duration': float(duration),
+                                    'isValid': bool(isValid)
+                                    }
+                                    )
 
         df = pd.DataFrame(list_dicts)
 

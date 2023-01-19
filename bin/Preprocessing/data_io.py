@@ -5,6 +5,7 @@ import json
 import datetime
 import csv
 
+import numpy as np
 import pandas as pd
 import gzip
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, Float, UniqueConstraint, Boolean, insert, update
@@ -173,7 +174,7 @@ class Database_IO():
         for col in type_dict.keys():
             if type_dict[col] == bool:
                 sqalchemy_col_types.append( Column(col, Boolean) )
-            elif type_dict[col] == float or type_dict[col] == int:
+            elif type_dict[col] == float or type_dict[col] ==np.float64 or type_dict[col] == int or type_dict[col]==np.int64:
                 sqalchemy_col_types.append( Column(col, Float) )
             elif type_dict[col] == str:
                 sqalchemy_col_types.append( Column(col, String) )
@@ -210,7 +211,7 @@ class Database_IO():
         del table, meta # delete of objects required, otherewise db ressources stay blocked and alter commands (create column) later do not work
 
 
-    def create_new_index(self, storage, table_name, index_name, index_cols):
+    def create_new_index(self, table_name, index_name, index_cols):
         '''
             Runs a sql command to create an index (btree) by default.
         '''
@@ -240,6 +241,6 @@ class Database_IO():
 
     ################## Write results in existing DB Table ##################
 
-    def append_frame_to_sql_table(self, db, table_name, data):
+    def append_frame_to_sql_table(self, table_name, data):
         data.to_sql(table_name, index=True,  con=self.engine, if_exists='append')  # , schema=db_config['schema']
 
