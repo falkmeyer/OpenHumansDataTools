@@ -99,6 +99,8 @@ class Data_Summarization():
         # Update the "min" column
         merged_df["min"] = merged_df.groupby("path")["min"].transform("min")
 
+        merged_df["mean_duration"] = merged_df.groupby("path")["mean_duration"].transform("mean")
+
         return(merged_df)
 
     
