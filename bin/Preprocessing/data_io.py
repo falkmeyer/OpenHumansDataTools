@@ -11,6 +11,11 @@ import gzip
 from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, DateTime, Float, UniqueConstraint, Boolean, insert, update
 from sqlalchemy.pool import NullPool
 from sqlalchemy import inspect
+import zipfile
+
+import zipfile
+import shutil
+
 
 class File_IO():
 
@@ -41,12 +46,12 @@ class File_IO():
         return subfolders
 
     # get json files inside patient folders
-    def find_json_files(self, path):
+    def find_files_with_ending(self, path, ending='.json'):
         json_files = []
         # r=root, d=directories, f = files
         for r, d, f in os.walk(path):
             for file in f:
-                if file.endswith('.json'):
+                if file.endswith(ending):
                     json_files.append(os.path.join(r, file))
         return json_files
 
@@ -60,8 +65,10 @@ class File_IO():
             result[folder_name] = self.find_json_files(folder)
         return result
 
+    def get_file_or_folder_name(self, path):
+        return os.path.basename(os.path.normpath(path)) 
 
-    def json_to_csv(self, file):
+    def load_json(self, file):
         with open(file, 'r') as f:
             data = json.load(f)
         
@@ -81,9 +88,44 @@ class File_IO():
         with open(csv_file, "r") as f:
             df = pd.read_csv(f)
             return df
-        
-    
 
+
+
+    def unzip_recursively(self, root_path, root_path_copy, unzip_all=True):
+        """
+            Recursively unzips all zip, tar, gz and tar.gz files in the root_path and copies the content to root_path_copy
+        """
+
+        if os.path.exists(root_path_copy):
+            shutil.rmtree(root_path_copy)
+        os.makedirs(root_path_copy)
+        def recursive_unzip(root_path, root_path_copy):
+            for root, dirs, files in os.walk(root_path):
+                dir_name = os.path.basename(root)
+                new_path = os.path.join(root_path_copy, dir_name)
+                if not os.path.exists(new_path):
+                    os.makedirs(new_path)
+                for file in files:
+                    if file.endswith(".zip") or file.endswith(".tar") or file.endswith(".gz") or file.endswith(".tar.gz"):
+                        file_path = os.path.join(root, file)
+                        if file.endswith(".gz") or file.endswith(".tar.gz"):
+                            with gzip.open(file_path, 'rb') as f_in:
+                                zip_dirname = os.path.splitext(file)[0]
+                                unzip_dir = os.path.join(new_path, zip_dirname)
+                                if unzip_all or not os.path.exists(unzip_dir):
+                                    os.mkdir(unzip_dir)
+                                with open(os.path.join(unzip_dir, file[:-3]), 'wb') as f_out:
+                                    f_out.write(f_in.read())
+                        else:
+                            zip_ref = zipfile.ZipFile(file_path)
+                            zip_dirname = os.path.splitext(file)[0]
+                            if unzip_all or not os.path.exists(os.path.join(new_path, zip_dirname)):
+                                zip_ref.extractall(os.path.join(new_path, zip_dirname))
+                                recursive_unzip(os.path.join(new_path, zip_dirname), os.path.join(root_path_copy, dir_name, zip_dirname))
+                            zip_ref.close()
+                    else:
+                        shutil.copy(os.path.join(root, file), new_path)
+        recursive_unzip(root_path, root_path_copy)
 
 
 ##############################
