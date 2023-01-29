@@ -358,7 +358,8 @@ class Data_Wrangling():
 
             availiable_columns = [col for col in column_drop_list if col in patient_frame.columns]
 
-            patient_frame.drop(columns=availiable_columns)
+            if len(column_drop_list) > 0: patient_frame.drop(columns=availiable_columns)
+            
             self.data_io.pandas_to_csv(frame=patient_frame, outpath=os.path.join(outpath, patient_id + ".csv") , index=False )
 
 
