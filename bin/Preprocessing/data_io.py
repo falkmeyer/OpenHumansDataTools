@@ -147,6 +147,8 @@ class Database_IO():
     def __init__(self, host_ip, port, db_user, db_pw, db_name):
 
         self.engine, self.metadata = self.connect_to_postgres_db(host_ip, port, db_user, db_pw, db_name)
+        
+        self.read_offsets = {} # providing a dict for offsets, which can be used e.g. for iterating a datbase table patient_wise
 
         # testing if the connection works out
         print(f'Connected to the database. List of schemes: {self.test_db_connection()}')
@@ -191,6 +193,46 @@ class Database_IO():
     # you can also write a file containing specific queries, which can be used here.
 
 
+
+    def read_db(self, source, limit_icustays, offset):
+        '''
+            Special function for tables with patient_id, but can be adjusted if required.
+        '''
+            
+        query = f'SELECT * from {source} WHERE patient_id IN ( \
+                        SELECT patient_id FROM {source} \
+                            GROUP BY patient_id \
+                            LIMIT {limit_icustays} OFFSET {offset}) ORDER BY patient_id, starttime;'
+
+        result = pd.read_sql(query, self.engine)
+
+        # provisorisch string columns to lowercase konvertieren TODO: fehlerhaft bei bool + NULL columns -> Zieltabelle neu generieren
+        non_number_cols = dict(result.select_dtypes(include=[object]) ).keys() #result.select_dtypes(exclude=[np.number])
+        for col in non_number_cols:
+            result[col] = result[col].astype(str).str.lower()
+
+        # convert icustay_id to string to match charite data types
+        result['patient_id'] = result['patient_id'].astype(int)
+        result['starttime'] = result['starttime'].astype('datetime64[ns]')
+
+        return result
+
+
+
+    def read_next_patient(self, source, limit_patients = 1):
+        """
+            Reads patients from database.
+        """
+
+        # current offset
+        self.read_offsets[source] = 0 if not source in self.read_offsets else self.read_offsets[source]
+
+        df = self.read_db(source, limit_patients, offset=self.read_offsets[source])
+        self.read_offsets[source] += limit_patients
+        return df
+
+
+
     #########################################
     ######## Write/Create operations ########
     #########################################
@@ -223,7 +265,7 @@ class Database_IO():
             elif type_dict[col] == str:
                 sqalchemy_col_types.append( Column(col, String) )
             elif type_dict[col] == pd._libs.tslibs.timestamps.Timestamp \
-                or type_dict[col] == 'datetime': # convert from manual typ specification
+                or type_dict[col] == 'datetime' or type_dict[col] == datetime.datetime: # convert from manual typ specification
                 sqalchemy_col_types.append( Column(col, DateTime) )
             else:
                 print(f'Error: Unknown Data type: {type_dict[col]}. No mapping to sqalchemy defined.')
@@ -286,5 +328,5 @@ class Database_IO():
     ################## Write results in existing DB Table ##################
 
     def append_frame_to_sql_table(self, table_name, data):
-        data.to_sql(table_name, index=True,  con=self.engine, if_exists='append')  # , schema=db_config['schema']
+        data.to_sql(table_name, index=False,  con=self.engine, if_exists='append')  # , schema=db_config['schema']
 
