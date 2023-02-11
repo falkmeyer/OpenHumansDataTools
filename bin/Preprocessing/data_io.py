@@ -28,6 +28,14 @@ class File_IO():
     ########## Data IO for files ########
 
     # get patients folders
+    def get_folder_structure(self, parent_folder):
+        folder_paths = []
+        for dirpath, dirnames, filenames in os.walk(parent_folder):
+            for dirname in dirnames:
+                folder_paths.append(os.path.join(dirpath, dirname))
+        return folder_paths
+
+    # get patients folders
     def get_folder_paths(self, parent_folder):
         folder_paths = []
         for dirpath, dirnames, filenames in os.walk(parent_folder):
@@ -56,6 +64,20 @@ class File_IO():
         return json_files
 
 
+    def get_folder_structure(self, parent_folder):
+        result = []
+        parent_folder_index = len(os.path.abspath(parent_folder))+1
+        for dirpath, dirnames, filenames in os.walk(parent_folder):
+
+            for file in filenames:
+                if file.startswith('.'): continue # ignore meta files
+                f = os.path.join(dirpath, file)[parent_folder_index:]
+                splitted = f.split('/')
+
+                d = { **{f'level_{i}' : splitted[i] for i in range(0, len(splitted) - 1)} , **{'file' : splitted[-1]} }
+                result.append(d)
+        return result
+
     #merge both functions
     def get_dict_of_folder_and_json_files(self, parent_folder):
         folder_paths = self.getSubfolders(parent_folder)
@@ -71,7 +93,6 @@ class File_IO():
     def load_json(self, file):
         with open(file, 'r') as f:
             data = json.load(f)
-        
         return data
 
     def pandas_to_csv(self, frame, outpath, index=False):

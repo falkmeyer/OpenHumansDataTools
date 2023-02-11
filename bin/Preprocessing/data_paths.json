@@ -1,0 +1,10 @@
+{
+    "apsdata.iobdata.iob" : "iob",
+    "devicestatus.openaps.enacted.iob" : "iob",
+    "devicestatus.openaps.iob.iob" : "iob",
+    "entries.glucose" : "sensorglucose",
+    "apsdata.glucosestatus.glucose" : "sensorglucose",
+    "treatments.glucose" : "sensorglucose",
+    "entries.sgv" : "sensorglucosevalue",
+    "bgreadings.value" : "sensorglucosevalue"
+}
