@@ -27,6 +27,13 @@ class File_IO():
 
     ########## Data IO for files ########
 
+
+    def recreate_dir(self, dirName): 
+        # remove the contents of the directory 
+        if os.path.exists(dirName):
+            shutil.rmtree(dirName)
+        os.makedirs(dirName)
+
     # get patients folders
     def get_folder_structure(self, parent_folder):
         folder_paths = []
@@ -54,14 +61,17 @@ class File_IO():
         return subfolders
 
     # get json files inside patient folders
-    def find_files_with_ending(self, path, ending='.json'):
-        json_files = []
+    def find_files_with_ending(self, path, allowed_endings=['.json']):
+        files = []
         # r=root, d=directories, f = files
         for r, d, f in os.walk(path):
             for file in f:
-                if file.endswith(ending):
-                    json_files.append(os.path.join(r, file))
-        return json_files
+                if not allowed_endings:
+                    print(f'Not allowed ending for file: {file}') #files.append(f)
+                elif any(file.endswith(ending) for ending in allowed_endings):
+                    files.append(os.path.join(r, file))
+
+        return files
 
 
     def get_folder_structure(self, parent_folder):
@@ -111,6 +121,56 @@ class File_IO():
             return df
 
 
+    def unzip_folder(self, source_zip, destination_folder):
+        with zipfile.ZipFile(source_zip, 'r') as zip_ref:
+            zip_ref.extractall(destination_folder)
+
+
+    def unzip_gz_file(self, file_path, target_dir):
+        # extract the filename from the file path
+        file_name = file_path.split('/')[-1]
+        # open the gzip file
+        with gzip.open(file_path, 'rb') as f_in:
+            # create file path for the extracted file
+            target_name = os.path.join(target_dir, file_name[:-3])
+            # open the target file
+            with open(target_name, 'wb') as f_out:
+                # copy the content of the gzip file to the target file
+                shutil.copyfileobj(f_in, f_out)
+                # close both files
+                f_in.close()
+                f_out.close()
+                
+        return True
+
+
+    def recursive_unzip(self, root_path, root_path_copy,  unzip_all=True):
+        for root, dirs, files in os.walk(root_path):
+            dir_name = os.path.basename(root)
+            new_path = os.path.join(root_path_copy, dir_name)
+            if not os.path.exists(new_path):
+                os.makedirs(new_path)
+            for file in files:
+                if file.endswith(".zip") or file.endswith(".tar") or file.endswith(".gz") or file.endswith(".tar.gz"):
+                    file_path = os.path.join(root, file)
+                    if file.endswith(".gz") or file.endswith(".tar.gz"):
+                        with gzip.open(file_path, 'rb') as f_in:
+                            zip_dirname = os.path.splitext(file)[0]
+                            unzip_dir = os.path.join(new_path, zip_dirname)
+                            if unzip_all or not os.path.exists(unzip_dir):
+                                os.mkdir(unzip_dir)
+                            with open(os.path.join(unzip_dir, file[:-3]), 'wb') as f_out:
+                                f_out.write(f_in.read())
+                    else:
+                        zip_ref = zipfile.ZipFile(file_path)
+                        zip_dirname = os.path.splitext(file)[0]
+                        if unzip_all or not os.path.exists(os.path.join(new_path, zip_dirname)):
+                            zip_ref.extractall(os.path.join(new_path, zip_dirname))
+                            self.recursive_unzip(os.path.join(new_path, zip_dirname), os.path.join(root_path_copy, dir_name, zip_dirname))
+                        zip_ref.close()
+                else:
+                    shutil.copy(os.path.join(root, file), new_path)
+
 
     def unzip_recursively(self, root_path, root_path_copy, unzip_all=True):
         """
@@ -120,33 +180,17 @@ class File_IO():
         if os.path.exists(root_path_copy):
             shutil.rmtree(root_path_copy)
         os.makedirs(root_path_copy)
-        def recursive_unzip(root_path, root_path_copy):
-            for root, dirs, files in os.walk(root_path):
-                dir_name = os.path.basename(root)
-                new_path = os.path.join(root_path_copy, dir_name)
-                if not os.path.exists(new_path):
-                    os.makedirs(new_path)
-                for file in files:
-                    if file.endswith(".zip") or file.endswith(".tar") or file.endswith(".gz") or file.endswith(".tar.gz"):
-                        file_path = os.path.join(root, file)
-                        if file.endswith(".gz") or file.endswith(".tar.gz"):
-                            with gzip.open(file_path, 'rb') as f_in:
-                                zip_dirname = os.path.splitext(file)[0]
-                                unzip_dir = os.path.join(new_path, zip_dirname)
-                                if unzip_all or not os.path.exists(unzip_dir):
-                                    os.mkdir(unzip_dir)
-                                with open(os.path.join(unzip_dir, file[:-3]), 'wb') as f_out:
-                                    f_out.write(f_in.read())
-                        else:
-                            zip_ref = zipfile.ZipFile(file_path)
-                            zip_dirname = os.path.splitext(file)[0]
-                            if unzip_all or not os.path.exists(os.path.join(new_path, zip_dirname)):
-                                zip_ref.extractall(os.path.join(new_path, zip_dirname))
-                                recursive_unzip(os.path.join(new_path, zip_dirname), os.path.join(root_path_copy, dir_name, zip_dirname))
-                            zip_ref.close()
-                    else:
-                        shutil.copy(os.path.join(root, file), new_path)
-        recursive_unzip(root_path, root_path_copy)
+
+        self.recursive_unzip(root_path, root_path_copy, unzip_all=unzip_all)
+
+
+
+class Data_Loader(File_IO):
+    
+
+    def __init__(self):
+        pass
+
 
 
 ##############################
@@ -350,4 +394,3 @@ class Database_IO():
 
     def append_frame_to_sql_table(self, table_name, data):
         data.to_sql(table_name, index=False,  con=self.engine, if_exists='append')  # , schema=db_config['schema']
-

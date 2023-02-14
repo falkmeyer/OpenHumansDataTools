@@ -245,6 +245,7 @@ class Data_Wrangling():
             Just proceeds one file.
         '''
         #print(f'Processing: {file_path}')
+
         json_data = self.data_io.load_json(file_path)
         file_name =  os.path.basename(os.path.normpath(file_path)) 
         
@@ -263,13 +264,13 @@ class Data_Wrangling():
 
 
 
-    def convert_files_to_csv(self, patient_id, json_files, results = None, index=-1):
+    def convert_files_to_csv(self, patient_id, json_files, results = None, index=-1,  tqdm=False):
         '''
             Works without multi threading, but can also be used as wrapper to proceeed a subset of selected files.
         '''
 
         patient_results = []
-        for file_path in tqdm(json_files) if not results else json_files: # use tqdm only if multi threading is disabled
+        for file_path in tqdm(json_files) if tqdm else json_files: # use tqdm only if multi threading is disabled
             csv_data = self.convert_one_file_to_csv(patient_id, file_path)
             patient_results.append(csv_data)
             
